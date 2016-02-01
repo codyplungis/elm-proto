@@ -16,9 +16,13 @@ init =
   let
     c = Controls.init
   in
-  Model (Table.init c.rows c.columns) c
+  { table = Table.init c.rows c.columns c.text
+  , controls = c
+  }
 
-type Action = Controls Controls.Action
+type Action
+  = Controls Controls.Action
+  | Table Table.Action
 
 update: Action -> Model -> Model
 update action model =
@@ -26,14 +30,22 @@ update action model =
     Controls act ->
       let
         c = Controls.update act model.controls
+        newTable =
+          if c.rows /= model.controls.rows
+          then Table.update (Table.UpdateRows c.rows c.columns) model.table c.text
+          else if c.columns /= model.controls.columns
+          then Table.update (Table.UpdateColumns c.columns) model.table c.text
+          else model.table
       in
-      { model | table = (Table.Model c.rows c.columns), controls = c}
+      { model | table = newTable, controls = c }
+    Table a ->
+      { model | table = Table.update a model.table model.controls.text}
 
 view: Signal.Address Action -> Model -> Html
 view address model =
   div [ mainStyle ]
   [ Controls.view (Signal.forwardTo address Controls) model.controls
-  , Table.view model.table
+  , Table.view (Signal.forwardTo address Table) model.table
   ]
 
 mainStyle: Attribute

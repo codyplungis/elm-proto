@@ -2,18 +2,37 @@ module TableElement where
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Html.Events exposing (..)
 
 type alias Model =
   { text: String
-}
+  , clickCount: Int
+  , index: Int
+  }
 
-init: String -> Model
-init text =
-  Model text
+init: String -> Int -> Model
+init text i =
+  Model text 0 i
 
-view: Model -> Html
-view model =
-  td [ tdStyle ] [ text model.text ]
+type Action
+  = Count
+
+update: Action -> Model -> String -> Model
+update action model txt =
+  case action of
+    Count ->
+      { model | text = txt, clickCount = model.clickCount + 1 }
+
+
+view: Signal.Address Action -> Model -> Html
+view address model =
+  td
+    [ tdStyle
+    , onClick address Count
+    ]
+    [ text model.text
+    , p [] [ text (toString model.clickCount) ]
+    ]
 
 tdStyle : Attribute
 tdStyle =
