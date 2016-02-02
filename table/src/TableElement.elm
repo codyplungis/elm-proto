@@ -7,35 +7,39 @@ import Html.Events exposing (..)
 type alias Model =
   { text: String
   , clickCount: Int
-  , index: Int
+  , id: Int
   }
 
-init: String -> Int -> Model
-init text i =
-  Model text 0 i
+init: Int -> Model
+init i =
+  Model "empty" 0 i
 
 type Action
-  = Count
+  = Click
+  | Update String
 
-update: Action -> Model -> String -> Model
-update action model txt =
+update: Action -> Model -> Model
+update action model =
   case action of
-    Count ->
-      { model | text = txt, clickCount = model.clickCount + 1 }
+    Click ->
+      { model | clickCount = model.clickCount + 1 }
+    Update txt ->
+      { model | text = txt, clickCount = model.clickCount + 1}
 
 
 view: Signal.Address Action -> Model -> Html
 view address model =
-  td
-    [ tdStyle
-    , onClick address Count
+  div
+    [ divStyle
+    , onClick address Click
     ]
-    [ text model.text
+    [ text (toString model.id)
+    , p [] [ text model.text ]
     , p [] [ text (toString model.clickCount) ]
     ]
 
-tdStyle : Attribute
-tdStyle =
+divStyle : Attribute
+divStyle =
   style
     [ ("border", "1px solid black")
     , ("width", "100px")

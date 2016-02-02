@@ -3,54 +3,81 @@ module Table where
 import Html exposing (..)
 import Html.Attributes exposing (..)
 
-import TableRow
+import Controls
+import TableElement
 
 type alias Model =
-  { rows: List TableRow.Model
+  { items: List TableElement.Model
+  , controls: Controls.Model
+  , rows: Int
+  , columns: Int
+  , uniqueId: Int
   }
 
-init: Int -> Int -> String-> Model
-init r c t =
+init: Controls.Model -> Int -> Int -> Model
+init cm r c =
   let
-    rows = List.map (TableRow.init c t) [1..r]
+    items = List.map (TableElement.init) [1..r*c]
   in
-    Model rows
+    Model items cm r c (r*c+1)
 
 type Action
-  = UpdateRows Int Int
+  = UpdateRows Int
   | UpdateColumns Int
-  | Click TableRow.Model TableRow.Action
+  | Click Int TableElement.Action
 
-update: Action -> Model -> String -> Model
-update action model txt =
+update: Action -> Model -> Model
+update action model =
   case action of
-    UpdateRows r c ->
+    UpdateRows r ->
       let
-        newRows =
-          if r > List.length model.rows
-          then model.rows ++ [TableRow.init c txt r]
-          else if r < List.length model.rows
-            then List.take r model.rows
-            else model.rows
+        newItems =
+          if model.rows < r
+          then model.items ++ List.map (\x -> TableElement.init (model.uniqueId + x)) [1..model.columns]
+          else if model.rows > r
+            then List.take (r*model.columns) model.items
+            else model.items
       in
-      {model | rows = newRows}
+      { model | rows = r, items = newItems, uniqueId = model.uniqueId + model.columns }
     UpdateColumns c ->
-      { model | rows = List.map (\r -> TableRow.update (TableRow.UpdateColumns c) r txt) model.rows }
-    Click row act ->
       let
-        newRows = List.map (\r -> if r == row then (TableRow.update act row txt) else r) model.rows
+        newItems =
+          if model.columns < c
+          then List.concat <| List.map (\r -> (List.take model.columns (List.drop ((r-1) * model.columns) model.items)) ++ [TableElement.init (model.uniqueId + r)] ) [1..model.rows]
+          else if model.columns > c
+            then List.concat <| List.map (\r -> List.take c (List.drop ((r-1) * model.columns) model.items) ) [1..model.rows]
+            else model.items
       in
-      { model | rows = newRows }
+      { model | columns = c, items = newItems, uniqueId = model.uniqueId + model.columns }
+    Click id act ->
+      let
+        newItems = List.map (\m -> if m.id == id then (TableElement.update (TableElement.Update model.controls.text) m) else m) model.items
+      in
+      { model | items = newItems }
 
 view: Signal.Address Action -> Model -> Html
 view address model =
   div
   [ style [("flex", "1 0 auto")] ]
   [ table []
-    [ tbody [] (List.map (mkRow address) model.rows)
+    [ tbody [] (List.map (mkRow address model.items model.columns) [1..model.rows] )
     ]
   ]
 
-mkRow: Signal.Address Action -> TableRow.Model -> Html
-mkRow address m =
-  TableRow.view (Signal.forwardTo address (Click m)) m
+mkRow: Signal.Address Action -> List TableElement.Model -> Int -> Int -> Html
+mkRow addr models c r =
+  let
+    row = List.take c (List.drop ((r-1)*c) models)
+  in
+  tr []
+    (List.map (mkItem addr row) [1..c])
+
+mkItem: Signal.Address Action -> List TableElement.Model -> Int -> Html
+mkItem address models i =
+  let
+    m = List.head (List.drop (i - 1) models)
+    model = Maybe.withDefault (TableElement.init -1) m
+  in
+  td []
+    [ TableElement.view (Signal.forwardTo address (Click model.id)) model
+    ]
