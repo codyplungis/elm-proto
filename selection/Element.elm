@@ -3,10 +3,10 @@ module Element where
 import Html exposing (..)
 import Html.Attributes exposing (..)
 
-import Selection
+import Selection exposing (Selectable)
 
 type alias Model =
-  Selection.Selection
+  Selectable
     { text : String
     }
 
