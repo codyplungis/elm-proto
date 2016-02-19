@@ -7,7 +7,7 @@ type alias Selectable a = { a | selected: Bool }
 
 init : List (Selectable a) -> List (Selectable a)
 init list =
-  Array.toList (toggleAt 0 (Array.fromList list))
+  Array.toList (selectAt 0 (Array.fromList list))
 
 selectNext : List (Selectable a) -> List (Selectable a)
 selectNext list =
@@ -36,7 +36,7 @@ go delta list =
   in
   if (index < 0) || (index + delta < 0) || (index + delta == List.length list)
   then list
-  else Array.toList (toggleAt (index + delta) (toggleAt index (Array.fromList list)))
+  else Array.toList (selectAt (index + delta) (unselectAt index (Array.fromList list)))
 
 at : Int -> List (Selectable a) -> Maybe (Selectable a)
 at index list =
@@ -44,14 +44,18 @@ at index list =
 
 getIndex : List (Selectable a) -> Int
 getIndex list =
-  Maybe.withDefault -1 (List.Extra.findIndex selected list)
+  Maybe.withDefault -1 (List.Extra.findIndex .selected list)
 
-selected : (Selectable a) -> Bool
-selected item =
-  item.selected
+selectAt : Int -> Array.Array (Selectable a) -> Array.Array (Selectable a)
+selectAt index arr =
+  setAt index True arr
 
-toggleAt : Int -> Array.Array (Selectable a) -> Array.Array (Selectable a)
-toggleAt index arr =
+unselectAt : Int -> Array.Array (Selectable a) -> Array.Array (Selectable a)
+unselectAt index arr =
+  setAt index False arr
+
+setAt : Int -> Bool -> Array.Array (Selectable a) -> Array.Array (Selectable a)
+setAt index val arr =
   let
     item = Array.get index arr
   in
@@ -59,4 +63,4 @@ toggleAt index arr =
     Nothing ->
       arr
     Just thing ->
-      Array.set index { thing | selected = not thing.selected} arr
+      Array.set index { thing | selected = val } arr
